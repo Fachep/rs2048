@@ -1,4 +1,4 @@
-use std::io::{stdout, Stdout, Write};
+use std::io::{stdout, Write};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, ExecutableCommand, QueueableCommand, terminal};
 use crate::board::Board;

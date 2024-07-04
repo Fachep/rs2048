@@ -186,7 +186,7 @@ impl<R> Board<R> {
         where It: Iterator<Item = &'c C> + ExactSizeIterator + DoubleEndedIterator + Sized,
             I: IntoIterator<IntoIter = It> + Clone,
     {
-        let mut it = cells.clone().into_iter();
+        let it = cells.clone().into_iter();
         let len = it.len();
         let mut map = it.enumerate()
             .filter(|x| x.1.get().ne(&0))
