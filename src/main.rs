@@ -1,14 +1,7 @@
 use std::io::{stdout, Write};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::{cursor, ExecutableCommand, QueueableCommand, terminal};
-use crate::board::Board;
-use crate::direction::Direction;
-use crate::state::State;
-
-mod board;
-mod state;
-mod direction;
-
+use rs2048::*;
 
 fn main() -> std::io::Result<()> {
     let mut board = Board::default();
@@ -17,9 +10,11 @@ fn main() -> std::io::Result<()> {
     stdout.execute(terminal::EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
     stdout.queue(cursor::Hide)?;
-    stdout.queue(cursor::MoveTo(0, 0))?;
-    writeln!(stdout, "{}", board)?;
-    loop {
+    while board.state() == State::Stop {
+        stdout.queue(terminal::Clear(terminal::ClearType::All))?;
+        stdout.queue(cursor::MoveTo(0, 0))?;
+        writeln!(stdout, "{}", board)?;
+
         let direction = match crossterm::event::read()? {
             Event::Key(KeyEvent {code, kind: KeyEventKind::Release, modifiers, .. }) => {
                 match (code, modifiers) {
@@ -34,29 +29,17 @@ fn main() -> std::io::Result<()> {
             _ => None
         };
         if let Some(direction) = direction {
-            let state = board.step(direction);
-            match state {
-                State::Over(_) => {
-                    break;
-                }
-                _ => {}
-            }
-
-            stdout.queue(terminal::Clear(terminal::ClearType::All))?;
-            stdout.queue(cursor::MoveTo(0, 0))?;
-            writeln!(stdout, "{}", board)?;
-            stdout.flush()?;
+            board.step(direction);
         }
     }
     stdout.execute(cursor::Show)?;
     terminal::disable_raw_mode()?;
     stdout.execute(terminal::LeaveAlternateScreen)?;
     println!("{}", board);
-    let state = board.state();
-    if State::Over(true) == state {
-        println!("You win!");
-    } else if State::Over(false) == state {
-        println!("Game over!");
+    match board.state() {
+        State::Win => println!("You win!"),
+        State::Over => println!("Game over!"),
+        _ => ()
     }
     Ok(())
 }

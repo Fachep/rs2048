@@ -106,8 +106,9 @@ impl Default for Board<ThreadRng> {
 
 impl<R> Display for Board<R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let sep = "+----".repeat(self.width);
         self.to_display().iter().try_for_each(|line| {
-            writeln!(f, "+----+----+----+----+")?;
+            writeln!(f, "{}+", &sep)?;
             line.iter().try_for_each(|cell| {
                 write!(f, "|")?;
                 match cell {
@@ -115,18 +116,18 @@ impl<R> Display for Board<R> {
                         write!(f, "    ")
                     }
                     Some(v) => {
-                        write!(f, "{:4}", v)
+                        write!(f, "{:^4}", v)
                     }
                 }
             })?;
             writeln!(f, "|")
         })?;
-        writeln!(f, "+----+----+----+----+")
+        writeln!(f, "{}+", sep)
     }
 }
 
 impl<R> Board<R> {
-    fn to_display(&self) -> Vec<Vec<Option<u16>>> {
+    pub fn to_display(&self) -> Vec<Vec<Option<u16>>> {
         self.cells.iter().map(|line| {
             line.iter().map(|cell| {
                 if cell.get() == 0 {
@@ -136,6 +137,14 @@ impl<R> Board<R> {
                 }
             }).collect()
         }).collect()
+    }
+}
+
+impl<R> Board<R>
+    where R: Clone
+{
+    pub fn rng(&self) -> R {
+        self.rand.borrow().clone()
     }
 }
 
@@ -154,7 +163,7 @@ impl<R> Board<R>
     }
 
     pub fn initialize(&mut self) {
-        assert_eq!(self.state, State::Uninitialized);
+        assert_eq!(self.state, State::Uninitialized, "This board has been initialized");
         self.cells.iter()
             .flatten()
             .choose_multiple(&mut *self.rand.borrow_mut(), 2)
@@ -207,7 +216,7 @@ impl<R> Board<R> {
         result
     }
 
-    fn try_move(&mut self) -> bool {
+    fn try_move(&self) -> bool {
         let State::Step(ref direction) = self.state else { unreachable!() };
         match direction {
             Direction::Up => {
@@ -250,7 +259,7 @@ impl<R> Board<R> {
         result
     }
 
-    fn try_merge(&mut self) -> bool {
+    fn try_merge(&self) -> bool {
         let State::Step(ref direction) = self.state else { unreachable!() };
         match direction {
             Direction::Up => {
@@ -281,26 +290,26 @@ impl<R> Board<R>
     where R: Rng
 {
     pub fn step(&mut self, direction: Direction) -> State {
-        assert_eq!(self.state, State::Stop);
-        if self.cells.iter().flatten().all(|c| c.get().ne(&0)) {
-            self.state = State::Over(false);
-            return self.state;
+        if self.state == State::Stop {
+            let full = self.cells.iter().flatten().all(|c| c.get().ne(&0));
+            self.state = State::Step(direction);
+            let mut result = false;
+            let move_state = self.try_move();
+            let merge_state = self.try_merge();
+            if merge_state {
+                self.try_move();
+            }
+            if merge_state || move_state {
+                result = self.try_generate();
+            }
+            self.state = if result && self.cells.iter().flatten().any(|c| c.get() == 11) {
+                State::Win
+            } else if !result && full {
+                State::Over
+            } else {
+                State::Stop
+            };
         }
-        self.state = State::Step(direction);
-        let mut result = false;
-        let move_state = self.try_move();
-        let merge_state = self.try_merge();
-        if merge_state {
-            self.try_move();
-        }
-        if merge_state || move_state {
-            result = self.try_generate();
-        }
-        self.state = if result && self.cells.iter().flatten().any(|c| c.get() == 11) {
-            State::Over(true)
-        } else {
-            State::Stop
-        };
         self.state
     }
 

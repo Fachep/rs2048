@@ -3,6 +3,11 @@ name = "rs2048"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "2048"
+path = "src/main.rs"
+required-features = ["crossterm"]
+
 [dependencies]
 rand = "0.8.5"
-crossterm = "0.27.0"
+crossterm = { version = "0.27.0", optional = true }

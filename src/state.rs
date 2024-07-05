@@ -5,5 +5,6 @@ pub enum State {
     Uninitialized,
     Stop,
     Step(Direction),
-    Over(bool),
+    Win,
+    Over,
 }
